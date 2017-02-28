@@ -86,9 +86,51 @@ object Ch13ActorsAndConcurrency extends App{
   println("::make it restart")
   lifecycleDemoActor ! "restart"
   Thread.sleep(1000)
-  actorSystem.shutdown
+
 
   //so its : send message-> constructor called -> pre start called -> message received -> [exception thrown] -> pre restart
   // -> post stop -> constructor called -> post restart -> pre-start -> post stop.
 
+  //Nested actors and children, including looking them up
+
+  class Child extends Actor {
+
+    println("Child made")
+
+    override def preStart(): Unit = {
+      println( "Path of child is"+ context.self.path)
+    }
+
+    override def receive: Receive = {
+      case _ => println( "child received")
+    }
+  }
+
+  class Parent extends Actor {
+
+    override def preStart(): Unit = {
+      println( "Path of parent is"+ context.self.path)
+    }
+
+    override def receive: Receive = {
+      case "createChild" =>
+        println("Parent creating child")
+        //when an actor creates a child actor, can use the context inside here:
+        val child = context.actorOf(Props[Child], name = "childActor")
+        val x =0
+
+    }
+  }
+
+  val parent = actorSystem.actorOf(Props[Parent], name = "ParentActor")
+
+  parent ! "createChild"
+  Thread.sleep(1000)
+
+  //can use string paths to look up child actors:Actor[akka://HelloActorSystem/user/ParentActor/childActor]
+  //the path stuff looks shit, took ages to get to work. 
+  val child = actorSystem.actorFor("/user/ParentActor/childActor")
+  child ! "someMessage"
+
+  actorSystem.shutdown
 }
