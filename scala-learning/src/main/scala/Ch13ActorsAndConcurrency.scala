@@ -1,4 +1,4 @@
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 
 /**
   * Created by rhall on 20/02/2017.
@@ -108,17 +108,26 @@ object Ch13ActorsAndConcurrency extends App{
 
   class Parent extends Actor {
 
+    //create a child on start up, and watch it:
+    val childActorInConstructor = context.actorOf(Props[Child], name = "childActorInConstructor")
+    context.watch( childActorInConstructor )
+
     override def preStart(): Unit = {
       println( "Path of parent is"+ context.self.path)
     }
 
     override def receive: Receive = {
+      case Terminated(childActorInConstructor ) => println("They killed my child")
       case "createChild" =>
         println("Parent creating child")
         //when an actor creates a child actor, can use the context inside here:
         val child = context.actorOf(Props[Child], name = "childActor")
-        val x =0
 
+        val x =0
+    }
+
+    override def postStop(): Unit = {
+      println("Parent actor stopping")
     }
   }
 
@@ -128,9 +137,32 @@ object Ch13ActorsAndConcurrency extends App{
   Thread.sleep(1000)
 
   //can use string paths to look up child actors:Actor[akka://HelloActorSystem/user/ParentActor/childActor]
-  //the path stuff looks shit, took ages to get to work. 
+  //the path stuff looks shit, took ages to get to work.
   val child = actorSystem.actorFor("/user/ParentActor/childActor")
   child ! "someMessage"
 
+  //TO stop an actor:
+  actorSystem.stop( parent ) //note how the postStop is called
+  //NOW this will not do anything, i.e. the message goes nowhere
+  //NOTE, no "actor stopped" exception is thrown, is just silent.
+  parent ! "createChild"
+
+  //start a new one:
+  val parent2 = actorSystem.actorOf(Props[Parent], name = "ParentActor2")
+  Thread.sleep(1000)
+  parent2 ! "createChild"
+  //can also send a PoisonPill
+  parent2 ! PoisonPill  //note that this also calls the postStop method
+
+
+  //DEMO of watching, note how the parent does something when its child is killed:
+  val parent3 = actorSystem.actorOf(Props[Parent], name = "ParentActor3")
+  Thread.sleep(1000)
+  //get the inner child:
+  val innerChild = actorSystem.actorFor("/user/ParentActor3/childActorInConstructor")
+  Thread.sleep(1000)
+  innerChild ! PoisonPill   //NOTice how this causes the parent to print "they killed my child"
+
+  //this shuts down the system gracefully.... without this will run for ever
   actorSystem.shutdown
 }
