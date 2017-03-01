@@ -1,5 +1,10 @@
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
+
 /**
   * Created by rhall on 20/02/2017.
   */
@@ -165,4 +170,32 @@ object Ch13ActorsAndConcurrency extends App{
 
   //this shuts down the system gracefully.... without this will run for ever
   actorSystem.shutdown
+
+  //Simple example of a future-- blocking on the result
+  val f = Future{
+    Thread.sleep( 3000 )
+    1 + 1
+  }
+
+  //call the future and BLOCK wait for the result:
+  println( "calling future at "+System.currentTimeMillis() )
+  val result = Await.result( f, 4 second )  //note the time out of 4 seconds
+  println( "got future at "+System.currentTimeMillis()+" result is:"+result )
+
+  //NON blocking future, use of a callback:
+  val callbackFuture = Future{
+    Thread.sleep(3000)
+    1
+  }
+
+  //This has the effect of calling the future, with the stuff inside executed when it completes.
+  callbackFuture.onComplete{
+    case Success(value) => println("call back completed successfully: val is"+ value)
+    case Failure(e) => e.printStackTrace
+  }
+
+  Thread.sleep(4000)
+
+
+
 }
