@@ -1,5 +1,6 @@
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -195,6 +196,29 @@ object Ch13ActorsAndConcurrency extends App{
   }
 
   Thread.sleep(4000)
+
+  //******* USE OF PARALLEL COLLECTIONS ***********/
+  //NOTE: move this to the concurrency chapter file:
+  //basically like java streams, allow you to perform an algorithm over a collection in parllel...
+
+  val aVector =  Vector.range(1, 10000 )
+  val listBuffer : ListBuffer[Long] = new ListBuffer[Long]()
+  aVector.par.foreach{
+    e =>
+      listBuffer += Thread.currentThread().getId()
+      println(e)
+  }
+  println("Threads used were: "+ listBuffer.toSet )
+  listBuffer.clear
+  //performing a transformation with collect at the end:
+  val parMapped = aVector.par.map{
+    e =>
+      listBuffer += Thread.currentThread().getId()
+  }
+
+  println("Threads used in mapping were: "+ listBuffer.toSet )
+  println("result of mapping is"+parMapped )
+
 
 
 
