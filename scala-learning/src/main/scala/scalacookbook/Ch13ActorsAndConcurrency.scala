@@ -1,9 +1,11 @@
+package scalacookbook
+
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
 /**
